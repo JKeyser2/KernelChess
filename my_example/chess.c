@@ -21,8 +21,12 @@ MODULE_DESCRIPTION("Chess in the kernel!!!");
 static char buffer[255];
 static int buffer_pointer = 0;
 
+static char theBoardArray[8][8][4];
+
 static bool hasGameStarted = false;
 static bool userIsWhite = false;
+static bool whitesTurn = true;
+
 
 /* Variables for device and device class */
 static dev_t my_device_nr;
@@ -86,71 +90,42 @@ int BlackBishopAllMovesCpu(int blackBishopAllMovesCpu[100][2], char theBoardArra
 int BlackQueenAllMovesCpu(int blackQueenAllMovesCpu[100][2], char theBoardArray[8][8][4], int pieceStartLocation[1][2]);
 
 
-
+void ClearBuffer(char buffer[]);
+void CopyToBuffer(char buffer[], char string[]);
 
 /**
  * @brief 2. (We receive) Read data out of the buffer
  */
 static ssize_t driver_read(struct file *File, char *user_buffer, size_t count, loff_t *offs) {
-        printk("Driver read from!\n");
-        
-	int to_copy, not_copied, delta;
-	
-	loff_t pos = *offs;
-	
-	if(pos >= buffer_pointer){
-	    return 0;
-	}
+    printk("Driver read from!\n");
+    
+    int not_copied, delta;
+    size_t to_copy;
 
+    loff_t pos = *offs;
 
-	/* Get amount of data to copy */
-	to_copy = min(count, buffer_pointer - pos);
+    if (pos >= buffer_pointer) {
+        return 0;
+    }
 
+    /* Get amount of data to copy (using buffer length) */
+    to_copy = min(count, strlen(buffer) - pos);
 
-	/* Copy data to user */
-	not_copied = copy_to_user(user_buffer, buffer + pos, to_copy);
-	
-	*offs += to_copy;
+    /* Copy data to user */
+    not_copied = copy_to_user(user_buffer, buffer + pos, to_copy);
 
+    *offs += to_copy;
 
-	/* Calculate data */
-	delta = to_copy - not_copied;
-	
-	
-	/* Log the string to the kernel log */
-        printk(KERN_INFO "Read string: %.*s\n", (int)to_copy, buffer + pos);
+    /* Calculate data */
+    delta = to_copy - not_copied;
 
+    /* Log the string to the kernel log */
+    printk(KERN_INFO "Read string: %.*s\n", (int)to_copy, buffer + pos);
 
-	return delta;
-	
-	
-	
-	//printk("Driver read from!\n");
+    /* Clear the buffer after reading */
+    memset(buffer, 0, sizeof(buffer));
 
-	//const char *msg = "great";
-	//size_t msg_len = strlen(msg) + 1; // Include the null terminator
-
-	/* Check if we're at the end of the message */
-	//if (*offs >= msg_len) {
-	    //return 0; // End of file
-	//}
-
-	/* Calculate the remaining length of the message */
-	//size_t remaining_len = msg_len - *offs;
-
-	/* Calculate the amount of data to copy */
-	//size_t to_copy = min(count, remaining_len);
-
-	/* Copy data to user */
-	//int not_copied = copy_to_user(user_buffer, msg + *offs, to_copy);
-
-	/* Update the file position */
-	//*offs += to_copy;
-
-	/* Calculate the number of bytes actually copied */
-	//size_t delta = to_copy - not_copied;
-
-	//return delta;
+    return delta;
 }
 
 
@@ -158,7 +133,7 @@ static ssize_t driver_read(struct file *File, char *user_buffer, size_t count, l
  * @brief 1. We write data to buffer and it handles it
  */
 static ssize_t driver_write(struct file *File, const char *user_buffer, size_t count, loff_t *offs) {
-        printk("Driver written to!\n");
+        //printk(KERN_INFO "Driver written to: %s\n", buffer);
         
 	int to_copy, not_copied, delta;
 
@@ -169,35 +144,1069 @@ static ssize_t driver_write(struct file *File, const char *user_buffer, size_t c
 
 	/* Copy data to user */
 	not_copied = copy_from_user(buffer, user_buffer, to_copy);
+	buffer[to_copy] = '\0';
 	buffer_pointer = to_copy;
-
-
-	/* Calculate data */
+	
 	delta = to_copy - not_copied;
 	
+	printk(KERN_INFO "Driver written to: %s\n", buffer);
+	printk(KERN_INFO "Length of buffer: %zu", strlen(buffer)); 
 	
-	printk(KERN_INFO "Oh yea: %s\n", buffer);
-	
-	
-	// If user wants to start game as white and game has not been started yet
-	if(strcmp(buffer, "00 W\n") == 0 && hasGameStarted == false){
-	    printk("That's tight");
-	    
-	    hasGameStarted = true;
-	    userIsWhite = true;
-	    
-	    
-	    strncpy(buffer, "OK\n", sizeof(buffer) - 1);
-	    buffer[sizeof(buffer) - 1] = '\0';
-	}
-	   
-	   
-	    
-	    
-	
-	char theBoardArray[8][8][4];
 	
 	//CreateBoard(theBoardArray);
+
+
+        // If user wants to start a new game as white
+	if(strcmp(buffer, "00 W\n") == 0){
+	    // Sets user to white
+	    userIsWhite = true;
+	    
+	    hasGameStarted = true;
+	    
+	    
+	    // Clear the buffer
+	    ClearBuffer(buffer);
+	       
+	    // Create a new board
+	    CreateBoard(theBoardArray);
+	    
+	    
+	    strcpy(buffer, "OK\n\0");
+	    
+	    // Change buffer pointer to length of new string
+	    buffer_pointer = strlen("OK\n");
+	    
+	    
+	// If user wants to start a new game as black
+	}else if(strcmp(buffer, "00 B\n") == 0){
+	    // Sets user to black
+	    userIsWhite = false;
+	    
+	    hasGameStarted = true;
+	    
+	    // Clear the buffer
+	    ClearBuffer(buffer);
+	       
+	    // Create a new board
+	    CreateBoard(theBoardArray);
+	    
+	    
+	    strcpy(buffer, "OK\n");
+	    
+	    // Change buffer pointer to length of new string
+	    buffer_pointer = strlen("OK\n");
+	    
+	    
+	// If user wants current game state and game has started   
+	}else if(strcmp(buffer, "1\n") == 0 && hasGameStarted == true){
+	    // Clear the buffer
+	    ClearBuffer(buffer);
+	    
+	    int i = 0;
+	    int j = 0;
+	    int k = 0;
+	    int m = 0;
+	    
+	    // Copy the board over
+	    for(i = 0; i < 8; i++){
+	        for(j = 0; j < 8; j++){
+		    for(k = 0; k < 2; k++){
+		        buffer[m] = theBoardArray[i][j][k];
+		        m++;
+		    }
+		    buffer[m] = ' ';
+		    m++;
+	        }
+	        buffer[m] = '\n';
+	        m++;
+	        }
+	    buffer[m] = '\0';	    
+	    
+	    // Change buffer pointer to length of new string
+	    buffer_pointer = 200;
+	}else if(strcmp(buffer, "1\n") == 0 && hasGameStarted == false){
+	    // Clear the buffer
+	    ClearBuffer(buffer);
+	    
+	    strcpy(buffer, "NOGAME\n");
+	    
+	    // Change buffer pointer to length of new string
+	    buffer_pointer = strlen("NOGAME\n");
+	    
+	// User move    
+	}else if(buffer[1] == '2'){
+	    // If no game has been started
+	    if(hasGameStarted == false){
+	        strcpy(buffer, "NOGAME\n");
+	    
+	        // Change buffer pointer to length of new string
+	        buffer_pointer = strlen("NOGAME\n");	
+	    
+	    // If white moves when black's turn        
+	    }else if(buffer[3] == 'W' && whitesTurn == false){
+	        strcpy(buffer, "OOT\n");
+	    
+	        // Change buffer pointer to length of new string
+	        buffer_pointer = strlen("OOT\n");	
+	    
+	    // If black moves when white's turn	    
+	    }else if(buffer[3] == 'B' && whitesTurn == true){
+	        strcpy(buffer, "OOT\n");
+	    
+	        // Change buffer pointer to length of new string
+	        buffer_pointer = strlen("OOT\n");
+	        
+	    // Moving white pawn   	    
+	    }else if(buffer[3] == 'W' && buffer[4] == 'P'){
+	        printk("WE IN HERE\n");
+	        
+	        int whitePawnAllMovesUser[100][2];
+	        
+	        int pieceStartLocation[1][2];
+	        int pieceEndLocation[1][2];
+	        
+	        char startLocation[3];
+	        char endLocation[3];
+	        char takenPiece[3];
+	        char upgradedPiece[3];
+	        
+	        startLocation[0] = buffer[5];
+	        startLocation[1] = buffer[6];
+	        startLocation[2] = '\0';
+	        
+	        endLocation[0] = buffer[8];
+	        endLocation[1] = buffer[9];
+	        endLocation[2] = '\0';
+	        
+	        takenPiece[0] = '\0';
+	        upgradedPiece[0] = '\0';
+	        
+	        ConvertLocationToIndex(startLocation, pieceStartLocation);
+	        ConvertLocationToIndex(endLocation, pieceEndLocation);
+	        
+	        
+	        int t = 0;
+	        
+	        for(t = 0; t < strlen(buffer); t++){
+	            if(buffer[t] == 'x'){
+	                takenPiece[0] = buffer[t+1];
+	                takenPiece[1] = buffer[t+2];
+	                takenPiece[2] = '\0';
+	            }   
+	        }
+	        for(t = 0; t < strlen(buffer); t++){
+	            if(buffer[t] == 'y'){
+	                upgradedPiece[0] = buffer[t+1];
+	                upgradedPiece[1] = buffer[t+2];
+	                upgradedPiece[2] = '\0';
+	            }   
+	        }
+	        
+	        int returnValue = -2;
+	        	        
+	        returnValue = WhitePawnAllMovesUser(whitePawnAllMovesUser, theBoardArray, pieceStartLocation, pieceEndLocation, takenPiece, upgradedPiece);
+	        
+	        
+	        if(returnValue == 1){
+	        strcpy(buffer, "OK\n");
+	        
+	        whitesTurn = false;
+	    
+	        // Change buffer pointer to length of new string
+	        buffer_pointer = strlen("OK\n");		        
+	        }else if(returnValue == 2){
+	        strcpy(buffer, "CHECK\n");
+	    
+	        // Change buffer pointer to length of new string
+	        buffer_pointer = strlen("CHECK\n");
+	        
+	        whitesTurn = false;	        
+	        
+	        }else if(returnValue == 3){
+	        strcpy(buffer, "MATE\n");
+	        
+	        hasGameStarted = false;
+	    
+	        // Change buffer pointer to length of new string
+	        buffer_pointer = strlen("MATE\n");		        
+	        }else{
+	        strcpy(buffer, "ILLMOVE\n");
+	    
+	        // Change buffer pointer to length of new string
+	        buffer_pointer = strlen("ILLMOVE\n");		        
+	     
+	       }
+	       
+	       
+	       
+	    }else if(buffer[3] == 'W' && buffer[4] == 'K'){
+	        
+	        int whiteKingAllMovesUser[100][2];
+	        
+	        int pieceStartLocation[1][2];
+	        int pieceEndLocation[1][2];
+	        
+	        char startLocation[3];
+	        char endLocation[3];
+	        char takenPiece[3];
+	        
+	        startLocation[0] = buffer[5];
+	        startLocation[1] = buffer[6];
+	        startLocation[2] = '\0';
+	        
+	        endLocation[0] = buffer[8];
+	        endLocation[1] = buffer[9];
+	        endLocation[2] = '\0';
+	        
+	        takenPiece[0] = '\0';
+	        
+	        ConvertLocationToIndex(startLocation, pieceStartLocation);
+	        ConvertLocationToIndex(endLocation, pieceEndLocation);
+	        
+	        
+	        int t = 0;
+	        
+	        for(t = 0; t < strlen(buffer); t++){
+	            if(buffer[t] == 'x'){
+	                takenPiece[0] = buffer[t+1];
+	                takenPiece[1] = buffer[t+2];
+	                takenPiece[2] = '\0';
+	            }   
+	        }
+	        
+	        int returnValue = -2;
+	        	        
+	        returnValue = WhiteKingAllMovesUser(whiteKingAllMovesUser, theBoardArray, pieceStartLocation, pieceEndLocation, takenPiece);
+	        
+	        
+	        if(returnValue == 1){
+	        strcpy(buffer, "OK\n");
+	        
+	        whitesTurn = false;
+	    
+	        // Change buffer pointer to length of new string
+	        buffer_pointer = strlen("OK\n");		        
+	        }else if(returnValue == 2){
+	        strcpy(buffer, "CHECK\n");
+	    
+	        // Change buffer pointer to length of new string
+	        buffer_pointer = strlen("CHECK\n");
+	        
+	        whitesTurn = false;	        
+	        
+	        }else if(returnValue == 3){
+	        strcpy(buffer, "MATE\n");
+	        
+	        hasGameStarted = false;
+	    
+	        // Change buffer pointer to length of new string
+	        buffer_pointer = strlen("MATE\n");		        
+	        }else{
+	        strcpy(buffer, "ILLMOVE\n");
+	    
+	        // Change buffer pointer to length of new string
+	        buffer_pointer = strlen("ILLMOVE\n");		        
+	     
+	       }
+	       
+	       
+	       
+	    }else if(buffer[3] == 'W' && buffer[4] == 'N'){
+	        
+	        int whiteKnightAllMovesUser[100][2];
+	        
+	        int pieceStartLocation[1][2];
+	        int pieceEndLocation[1][2];
+	        
+	        char startLocation[3];
+	        char endLocation[3];
+	        char takenPiece[3];
+	        
+	        startLocation[0] = buffer[5];
+	        startLocation[1] = buffer[6];
+	        startLocation[2] = '\0';
+	        
+	        endLocation[0] = buffer[8];
+	        endLocation[1] = buffer[9];
+	        endLocation[2] = '\0';
+	        
+	        takenPiece[0] = '\0';
+	        
+	        ConvertLocationToIndex(startLocation, pieceStartLocation);
+	        ConvertLocationToIndex(endLocation, pieceEndLocation);
+	        
+	        
+	        int t = 0;
+	        
+	        for(t = 0; t < strlen(buffer); t++){
+	            if(buffer[t] == 'x'){
+	                takenPiece[0] = buffer[t+1];
+	                takenPiece[1] = buffer[t+2];
+	                takenPiece[2] = '\0';
+	            }   
+	        }
+	        
+	        int returnValue = -2;
+	        	        
+	        returnValue = WhiteKnightAllMovesUser(whiteKnightAllMovesUser, theBoardArray, pieceStartLocation, pieceEndLocation, takenPiece);
+	        
+	        
+	        if(returnValue == 1){
+	        strcpy(buffer, "OK\n");
+	        
+	        whitesTurn = false;
+	    
+	        // Change buffer pointer to length of new string
+	        buffer_pointer = strlen("OK\n");		        
+	        }else if(returnValue == 2){
+	        strcpy(buffer, "CHECK\n");
+	    
+	        // Change buffer pointer to length of new string
+	        buffer_pointer = strlen("CHECK\n");
+	        
+	        whitesTurn = false;	        
+	        
+	        }else if(returnValue == 3){
+	        strcpy(buffer, "MATE\n");
+	        
+	        hasGameStarted = false;
+	    
+	        // Change buffer pointer to length of new string
+	        buffer_pointer = strlen("MATE\n");		        
+	        }else{
+	        strcpy(buffer, "ILLMOVE\n");
+	    
+	        // Change buffer pointer to length of new string
+	        buffer_pointer = strlen("ILLMOVE\n");		        
+	     
+	       }
+	       
+	       
+	       
+	    }else if(buffer[3] == 'W' && buffer[4] == 'R'){
+	        
+	        int whiteRookAllMovesUser[100][2];
+	        
+	        int pieceStartLocation[1][2];
+	        int pieceEndLocation[1][2];
+	        
+	        char startLocation[3];
+	        char endLocation[3];
+	        char takenPiece[3];
+	        
+	        startLocation[0] = buffer[5];
+	        startLocation[1] = buffer[6];
+	        startLocation[2] = '\0';
+	        
+	        endLocation[0] = buffer[8];
+	        endLocation[1] = buffer[9];
+	        endLocation[2] = '\0';
+	        
+	        takenPiece[0] = '\0';
+	        
+	        ConvertLocationToIndex(startLocation, pieceStartLocation);
+	        ConvertLocationToIndex(endLocation, pieceEndLocation);
+	        
+	        
+	        int t = 0;
+	        
+	        for(t = 0; t < strlen(buffer); t++){
+	            if(buffer[t] == 'x'){
+	                takenPiece[0] = buffer[t+1];
+	                takenPiece[1] = buffer[t+2];
+	                takenPiece[2] = '\0';
+	            }   
+	        }
+	        
+	        int returnValue = -2;
+	        	        
+	        returnValue = WhiteRookAllMovesUser(whiteRookAllMovesUser, theBoardArray, pieceStartLocation, pieceEndLocation, takenPiece);
+	        
+	        
+	        if(returnValue == 1){
+	        strcpy(buffer, "OK\n");
+	        
+	        whitesTurn = false;
+	    
+	        // Change buffer pointer to length of new string
+	        buffer_pointer = strlen("OK\n");		        
+	        }else if(returnValue == 2){
+	        strcpy(buffer, "CHECK\n");
+	    
+	        // Change buffer pointer to length of new string
+	        buffer_pointer = strlen("CHECK\n");
+	        
+	        whitesTurn = false;	        
+	        
+	        }else if(returnValue == 3){
+	        strcpy(buffer, "MATE\n");
+	        
+	        hasGameStarted = false;
+	    
+	        // Change buffer pointer to length of new string
+	        buffer_pointer = strlen("MATE\n");		        
+	        }else{
+	        strcpy(buffer, "ILLMOVE\n");
+	    
+	        // Change buffer pointer to length of new string
+	        buffer_pointer = strlen("ILLMOVE\n");		        
+	     
+	       }
+	       
+	       
+	       
+	    }else if(buffer[3] == 'W' && buffer[4] == 'B'){
+	        
+	        int whiteBishopAllMovesUser[100][2];
+	        
+	        int pieceStartLocation[1][2];
+	        int pieceEndLocation[1][2];
+	        
+	        char startLocation[3];
+	        char endLocation[3];
+	        char takenPiece[3];
+	        
+	        startLocation[0] = buffer[5];
+	        startLocation[1] = buffer[6];
+	        startLocation[2] = '\0';
+	        
+	        endLocation[0] = buffer[8];
+	        endLocation[1] = buffer[9];
+	        endLocation[2] = '\0';
+	        
+	        takenPiece[0] = '\0';
+	        
+	        ConvertLocationToIndex(startLocation, pieceStartLocation);
+	        ConvertLocationToIndex(endLocation, pieceEndLocation);
+	        
+	        
+	        int t = 0;
+	        
+	        for(t = 0; t < strlen(buffer); t++){
+	            if(buffer[t] == 'x'){
+	                takenPiece[0] = buffer[t+1];
+	                takenPiece[1] = buffer[t+2];
+	                takenPiece[2] = '\0';
+	            }   
+	        }
+	        
+	        int returnValue = -2;
+	        	        
+	        returnValue = WhiteBishopAllMovesUser(whiteBishopAllMovesUser, theBoardArray, pieceStartLocation, pieceEndLocation, takenPiece);
+	        
+	        
+	        if(returnValue == 1){
+	        strcpy(buffer, "OK\n");
+	        
+	        whitesTurn = false;
+	    
+	        // Change buffer pointer to length of new string
+	        buffer_pointer = strlen("OK\n");		        
+	        }else if(returnValue == 2){
+	        strcpy(buffer, "CHECK\n");
+	    
+	        // Change buffer pointer to length of new string
+	        buffer_pointer = strlen("CHECK\n");
+	        
+	        whitesTurn = false;	        
+	        
+	        }else if(returnValue == 3){
+	        strcpy(buffer, "MATE\n");
+	        
+	        hasGameStarted = false;
+	    
+	        // Change buffer pointer to length of new string
+	        buffer_pointer = strlen("MATE\n");		        
+	        }else{
+	        strcpy(buffer, "ILLMOVE\n");
+	    
+	        // Change buffer pointer to length of new string
+	        buffer_pointer = strlen("ILLMOVE\n");		        
+	     
+	       }
+	       
+	       
+	       
+	    }else if(buffer[3] == 'W' && buffer[4] == 'Q'){
+	        
+	        int whiteQueenAllMovesUser[100][2];
+	        
+	        int pieceStartLocation[1][2];
+	        int pieceEndLocation[1][2];
+	        
+	        char startLocation[3];
+	        char endLocation[3];
+	        char takenPiece[3];
+	        
+	        startLocation[0] = buffer[5];
+	        startLocation[1] = buffer[6];
+	        startLocation[2] = '\0';
+	        
+	        endLocation[0] = buffer[8];
+	        endLocation[1] = buffer[9];
+	        endLocation[2] = '\0';
+	        
+	        takenPiece[0] = '\0';
+	        
+	        ConvertLocationToIndex(startLocation, pieceStartLocation);
+	        ConvertLocationToIndex(endLocation, pieceEndLocation);
+	        
+	        
+	        int t = 0;
+	        
+	        for(t = 0; t < strlen(buffer); t++){
+	            if(buffer[t] == 'x'){
+	                takenPiece[0] = buffer[t+1];
+	                takenPiece[1] = buffer[t+2];
+	                takenPiece[2] = '\0';
+	            }   
+	        }
+	        
+	        int returnValue = -2;
+	        	        
+	        returnValue = WhiteQueenAllMovesUser(whiteQueenAllMovesUser, theBoardArray, pieceStartLocation, pieceEndLocation, takenPiece);
+	        
+	        
+	        if(returnValue == 1){
+	        strcpy(buffer, "OK\n");
+	        
+	        whitesTurn = false;
+	    
+	        // Change buffer pointer to length of new string
+	        buffer_pointer = strlen("OK\n");		        
+	        }else if(returnValue == 2){
+	        strcpy(buffer, "CHECK\n");
+	    
+	        // Change buffer pointer to length of new string
+	        buffer_pointer = strlen("CHECK\n");
+	        
+	        whitesTurn = false;	        
+	        
+	        }else if(returnValue == 3){
+	        strcpy(buffer, "MATE\n");
+	        
+	        hasGameStarted = false;
+	    
+	        // Change buffer pointer to length of new string
+	        buffer_pointer = strlen("MATE\n");		        
+	        }else{
+	        strcpy(buffer, "ILLMOVE\n");
+	    
+	        // Change buffer pointer to length of new string
+	        buffer_pointer = strlen("ILLMOVE\n");		        
+	     
+	       }
+	       
+	       
+	       
+	    }else if(buffer[3] == 'B' && buffer[4] == 'P'){
+	        
+	        int blackPawnAllMovesUser[100][2];
+	        
+	        int pieceStartLocation[1][2];
+	        int pieceEndLocation[1][2];
+	        
+	        char startLocation[3];
+	        char endLocation[3];
+	        char takenPiece[3];
+	        char upgradedPiece[3];
+	        
+	        startLocation[0] = buffer[5];
+	        startLocation[1] = buffer[6];
+	        startLocation[2] = '\0';
+	        
+	        endLocation[0] = buffer[8];
+	        endLocation[1] = buffer[9];
+	        endLocation[2] = '\0';
+	        
+	        takenPiece[0] = '\0';
+	        upgradedPiece[0] = '\0';
+	        
+	        ConvertLocationToIndex(startLocation, pieceStartLocation);
+	        ConvertLocationToIndex(endLocation, pieceEndLocation);
+	        
+	        
+	        int t = 0;
+	        
+	        for(t = 0; t < strlen(buffer); t++){
+	            if(buffer[t] == 'x'){
+	                takenPiece[0] = buffer[t+1];
+	                takenPiece[1] = buffer[t+2];
+	                takenPiece[2] = '\0';
+	            }   
+	        }
+	        for(t = 0; t < strlen(buffer); t++){
+	            if(buffer[t] == 'y'){
+	                upgradedPiece[0] = buffer[t+1];
+	                upgradedPiece[1] = buffer[t+2];
+	                upgradedPiece[2] = '\0';
+	            }   
+	        }
+	        
+	        int returnValue = -2;
+	        	        
+	        returnValue = BlackPawnAllMovesUser(blackPawnAllMovesUser, theBoardArray, pieceStartLocation, pieceEndLocation, takenPiece, upgradedPiece);
+	        
+	        
+	        if(returnValue == 1){
+	        strcpy(buffer, "OK\n");
+	        
+	        whitesTurn = false;
+	    
+	        // Change buffer pointer to length of new string
+	        buffer_pointer = strlen("OK\n");		        
+	        }else if(returnValue == 2){
+	        strcpy(buffer, "CHECK\n");
+	    
+	        // Change buffer pointer to length of new string
+	        buffer_pointer = strlen("CHECK\n");
+	        
+	        whitesTurn = false;	        
+	        
+	        }else if(returnValue == 3){
+	        strcpy(buffer, "MATE\n");
+	        
+	        hasGameStarted = false;
+	    
+	        // Change buffer pointer to length of new string
+	        buffer_pointer = strlen("MATE\n");		        
+	        }else{
+	        strcpy(buffer, "ILLMOVE\n");
+	    
+	        // Change buffer pointer to length of new string
+	        buffer_pointer = strlen("ILLMOVE\n");		        
+	     
+	       }
+	       
+	       
+	       
+	    }else if(buffer[3] == 'B' && buffer[4] == 'K'){
+	        
+	        int blackKingAllMovesUser[100][2];
+	        
+	        int pieceStartLocation[1][2];
+	        int pieceEndLocation[1][2];
+	        
+	        char startLocation[3];
+	        char endLocation[3];
+	        char takenPiece[3];
+	        
+	        startLocation[0] = buffer[5];
+	        startLocation[1] = buffer[6];
+	        startLocation[2] = '\0';
+	        
+	        endLocation[0] = buffer[8];
+	        endLocation[1] = buffer[9];
+	        endLocation[2] = '\0';
+	        
+	        takenPiece[0] = '\0';
+	        
+	        ConvertLocationToIndex(startLocation, pieceStartLocation);
+	        ConvertLocationToIndex(endLocation, pieceEndLocation);
+	        
+	        
+	        int t = 0;
+	        
+	        for(t = 0; t < strlen(buffer); t++){
+	            if(buffer[t] == 'x'){
+	                takenPiece[0] = buffer[t+1];
+	                takenPiece[1] = buffer[t+2];
+	                takenPiece[2] = '\0';
+	            }   
+	        }
+	        
+	        int returnValue = -2;
+	        	        
+	        returnValue = BlackKingAllMovesUser(blackKingAllMovesUser, theBoardArray, pieceStartLocation, pieceEndLocation, takenPiece);
+	        
+	        
+	        if(returnValue == 1){
+	        strcpy(buffer, "OK\n");
+	        
+	        whitesTurn = false;
+	    
+	        // Change buffer pointer to length of new string
+	        buffer_pointer = strlen("OK\n");		        
+	        }else if(returnValue == 2){
+	        strcpy(buffer, "CHECK\n");
+	    
+	        // Change buffer pointer to length of new string
+	        buffer_pointer = strlen("CHECK\n");
+	        
+	        whitesTurn = false;	        
+	        
+	        }else if(returnValue == 3){
+	        strcpy(buffer, "MATE\n");
+	        
+	        hasGameStarted = false;
+	    
+	        // Change buffer pointer to length of new string
+	        buffer_pointer = strlen("MATE\n");		        
+	        }else{
+	        strcpy(buffer, "ILLMOVE\n");
+	    
+	        // Change buffer pointer to length of new string
+	        buffer_pointer = strlen("ILLMOVE\n");		        
+	     
+	       }
+	       
+	       
+	       
+	    }else if(buffer[3] == 'B' && buffer[4] == 'N'){
+	        
+	        int blackKnightAllMovesUser[100][2];
+	        
+	        int pieceStartLocation[1][2];
+	        int pieceEndLocation[1][2];
+	        
+	        char startLocation[3];
+	        char endLocation[3];
+	        char takenPiece[3];
+	        
+	        startLocation[0] = buffer[5];
+	        startLocation[1] = buffer[6];
+	        startLocation[2] = '\0';
+	        
+	        endLocation[0] = buffer[8];
+	        endLocation[1] = buffer[9];
+	        endLocation[2] = '\0';
+	        
+	        takenPiece[0] = '\0';
+	        
+	        ConvertLocationToIndex(startLocation, pieceStartLocation);
+	        ConvertLocationToIndex(endLocation, pieceEndLocation);
+	        
+	        
+	        int t = 0;
+	        
+	        for(t = 0; t < strlen(buffer); t++){
+	            if(buffer[t] == 'x'){
+	                takenPiece[0] = buffer[t+1];
+	                takenPiece[1] = buffer[t+2];
+	                takenPiece[2] = '\0';
+	            }   
+	        }
+	        
+	        int returnValue = -2;
+	        	        
+	        returnValue = BlackKnightAllMovesUser(blackKnightAllMovesUser, theBoardArray, pieceStartLocation, pieceEndLocation, takenPiece);
+	        
+	        
+	        if(returnValue == 1){
+	        strcpy(buffer, "OK\n");
+	        
+	        whitesTurn = false;
+	    
+	        // Change buffer pointer to length of new string
+	        buffer_pointer = strlen("OK\n");		        
+	        }else if(returnValue == 2){
+	        strcpy(buffer, "CHECK\n");
+	    
+	        // Change buffer pointer to length of new string
+	        buffer_pointer = strlen("CHECK\n");
+	        
+	        whitesTurn = false;	        
+	        
+	        }else if(returnValue == 3){
+	        strcpy(buffer, "MATE\n");
+	        
+	        hasGameStarted = false;
+	    
+	        // Change buffer pointer to length of new string
+	        buffer_pointer = strlen("MATE\n");		        
+	        }else{
+	        strcpy(buffer, "ILLMOVE\n");
+	    
+	        // Change buffer pointer to length of new string
+	        buffer_pointer = strlen("ILLMOVE\n");		        
+	     
+	       }
+	       
+	    }else if(buffer[3] == 'B' && buffer[4] == 'R'){
+	        
+	        int blackRookAllMovesUser[100][2];
+	        
+	        int pieceStartLocation[1][2];
+	        int pieceEndLocation[1][2];
+	        
+	        char startLocation[3];
+	        char endLocation[3];
+	        char takenPiece[3];
+	        
+	        startLocation[0] = buffer[5];
+	        startLocation[1] = buffer[6];
+	        startLocation[2] = '\0';
+	        
+	        endLocation[0] = buffer[8];
+	        endLocation[1] = buffer[9];
+	        endLocation[2] = '\0';
+	        
+	        takenPiece[0] = '\0';
+	        
+	        ConvertLocationToIndex(startLocation, pieceStartLocation);
+	        ConvertLocationToIndex(endLocation, pieceEndLocation);
+	        
+	        
+	        int t = 0;
+	        
+	        for(t = 0; t < strlen(buffer); t++){
+	            if(buffer[t] == 'x'){
+	                takenPiece[0] = buffer[t+1];
+	                takenPiece[1] = buffer[t+2];
+	                takenPiece[2] = '\0';
+	            }   
+	        }
+	        
+	        int returnValue = -2;
+	        	        
+	        returnValue = BlackRookAllMovesUser(blackRookAllMovesUser, theBoardArray, pieceStartLocation, pieceEndLocation, takenPiece);
+	        
+	        
+	        if(returnValue == 1){
+	        strcpy(buffer, "OK\n");
+	        
+	        whitesTurn = false;
+	    
+	        // Change buffer pointer to length of new string
+	        buffer_pointer = strlen("OK\n");		        
+	        }else if(returnValue == 2){
+	        strcpy(buffer, "CHECK\n");
+	    
+	        // Change buffer pointer to length of new string
+	        buffer_pointer = strlen("CHECK\n");
+	        
+	        whitesTurn = false;	        
+	        
+	        }else if(returnValue == 3){
+	        strcpy(buffer, "MATE\n");
+	        
+	        hasGameStarted = false;
+	    
+	        // Change buffer pointer to length of new string
+	        buffer_pointer = strlen("MATE\n");		        
+	        }else{
+	        strcpy(buffer, "ILLMOVE\n");
+	    
+	        // Change buffer pointer to length of new string
+	        buffer_pointer = strlen("ILLMOVE\n");		        
+	        }
+	        
+	    }else if(buffer[3] == 'B' && buffer[4] == 'B'){
+	        
+	        int blackBishopAllMovesUser[100][2];
+	        
+	        int pieceStartLocation[1][2];
+	        int pieceEndLocation[1][2];
+	        
+	        char startLocation[3];
+	        char endLocation[3];
+	        char takenPiece[3];
+	        
+	        startLocation[0] = buffer[5];
+	        startLocation[1] = buffer[6];
+	        startLocation[2] = '\0';
+	        
+	        endLocation[0] = buffer[8];
+	        endLocation[1] = buffer[9];
+	        endLocation[2] = '\0';
+	        
+	        takenPiece[0] = '\0';
+	        
+	        ConvertLocationToIndex(startLocation, pieceStartLocation);
+	        ConvertLocationToIndex(endLocation, pieceEndLocation);
+	        
+	        
+	        int t = 0;
+	        
+	        for(t = 0; t < strlen(buffer); t++){
+	            if(buffer[t] == 'x'){
+	                takenPiece[0] = buffer[t+1];
+	                takenPiece[1] = buffer[t+2];
+	                takenPiece[2] = '\0';
+	            }   
+	        }
+	        
+	        int returnValue = -2;
+	        	        
+	        returnValue = BlackBishopAllMovesUser(blackBishopAllMovesUser, theBoardArray, pieceStartLocation, pieceEndLocation, takenPiece);
+	        
+	        
+	        if(returnValue == 1){
+	        strcpy(buffer, "OK\n");
+	        
+	        whitesTurn = false;
+	    
+	        // Change buffer pointer to length of new string
+	        buffer_pointer = strlen("OK\n");		        
+	        }else if(returnValue == 2){
+	        strcpy(buffer, "CHECK\n");
+	    
+	        // Change buffer pointer to length of new string
+	        buffer_pointer = strlen("CHECK\n");
+	        
+	        whitesTurn = false;	        
+	        
+	        }else if(returnValue == 3){
+	        strcpy(buffer, "MATE\n");
+	        
+	        hasGameStarted = false;
+	    
+	        // Change buffer pointer to length of new string
+	        buffer_pointer = strlen("MATE\n");		        
+	        }else{
+	        strcpy(buffer, "ILLMOVE\n");
+	    
+	        // Change buffer pointer to length of new string
+	        buffer_pointer = strlen("ILLMOVE\n");		        
+	        }
+	    
+	    }else if(buffer[3] == 'B' && buffer[4] == 'Q'){
+	        
+	        int blackQueenAllMovesUser[100][2];
+	        
+	        int pieceStartLocation[1][2];
+	        int pieceEndLocation[1][2];
+	        
+	        char startLocation[3];
+	        char endLocation[3];
+	        char takenPiece[3];
+	        
+	        startLocation[0] = buffer[5];
+	        startLocation[1] = buffer[6];
+	        startLocation[2] = '\0';
+	        
+	        endLocation[0] = buffer[8];
+	        endLocation[1] = buffer[9];
+	        endLocation[2] = '\0';
+	        
+	        takenPiece[0] = '\0';
+	        
+	        ConvertLocationToIndex(startLocation, pieceStartLocation);
+	        ConvertLocationToIndex(endLocation, pieceEndLocation);
+	        
+	        
+	        int t = 0;
+	        
+	        for(t = 0; t < strlen(buffer); t++){
+	            if(buffer[t] == 'x'){
+	                takenPiece[0] = buffer[t+1];
+	                takenPiece[1] = buffer[t+2];
+	                takenPiece[2] = '\0';
+	            }   
+	        }
+	        
+	        int returnValue = -2;
+	        	        
+	        returnValue = BlackQueenAllMovesUser(blackQueenAllMovesUser, theBoardArray, pieceStartLocation, pieceEndLocation, takenPiece);
+	        
+	        
+	        if(returnValue == 1){
+	        strcpy(buffer, "OK\n");
+	        
+	        whitesTurn = false;
+	    
+	        // Change buffer pointer to length of new string
+	        buffer_pointer = strlen("OK\n");		        
+	        }else if(returnValue == 2){
+	        strcpy(buffer, "CHECK\n");
+	    
+	        // Change buffer pointer to length of new string
+	        buffer_pointer = strlen("CHECK\n");
+	        
+	        whitesTurn = false;	        
+	        
+	        }else if(returnValue == 3){
+	        strcpy(buffer, "MATE\n");
+	        
+	        hasGameStarted = false;
+	    
+	        // Change buffer pointer to length of new string
+	        buffer_pointer = strlen("MATE\n");		        
+	        }else{
+	        strcpy(buffer, "ILLMOVE\n");
+	    
+	        // Change buffer pointer to length of new string
+	        buffer_pointer = strlen("ILLMOVE\n");		        
+	        }
+	    
+	    }
+	    
+	    
+	    
+	    
+	}
+	
+	
+	//02 WPf7-g8xBNyWB
+	// 17 with newline included
+	
+	
+	
+	//PrintBoard(theBoardArray);
+	
+	// Clear the buffer
+	//int n = 0;
+	//for(n = 0; n < sizeof(buffer); n++){
+	    //buffer[n] = '\0';
+	//}
+	
+	//printk("BELOW\n");
+	//CreateBoard(theBoardArray);
+	//PrintBoard(theBoardArray);
+	
+	//int i = 0;
+	//int j = 0;
+	//int k = 0;
+	//int m = 0;
+
+
+	//for(i = 0; i < 8; i++){
+	    //for(j = 0; j < 8; j++){
+	        //for(k = 0; k < 2; k++){
+		    //buffer[m] = theBoardArray[i][j][k];
+		    //m++;
+	        //}
+	        //buffer[m] = ' ';
+	        //m++;
+	    //}
+	    //buffer[m] = '\n';
+	    //m++;
+	    //}
+	//buffer[m] = '\0';
+
+
+	//printk("Buffer Board:%s", buffer);
+        //printk(KERN_INFO "Length of buffer: %zu", strlen(buffer)); 
+	
+	//char* startLocation = "A2";
+	//char* endLocation = "A3";
+	
+	//int pieceStartLocation[1][2];
+	//int pieceEndLocation[1][2];
+	
+	//char* startLocation2 = "A1";
+	//char* endLocation2 = "A2";
+	
+	//int pieceStartLocation2[1][2];
+	//int pieceEndLocation2[1][2];
+	
+	//int greatcool = 0;
+	
+	//ConvertLocationToIndex(startLocation, pieceStartLocation);
+	//ConvertLocationToIndex(endLocation, pieceEndLocation);
+	
+	//ConvertLocationToIndex(startLocation2, pieceStartLocation2);
+	//ConvertLocationToIndex(endLocation2, pieceEndLocation2);
+	
+	//int whitePawnAllMovesUser[100][2];
+	//int whiteRookAllMovesUser[100][2];
+	
+	//greatcool = WhitePawnAllMovesCpu(whitePawnAllMovesCpu, theBoardArray, pieceStartLocation);
+	
+	//greatcool = WhitePawnAllMovesUser(whitePawnAllMovesUser, theBoardArray, pieceStartLocation, pieceEndLocation, "", "");
+	
+	//greatcool = WhiteRookAllMovesUser(whiteRookAllMovesUser, theBoardArray, pieceStartLocation2, pieceEndLocation2, "");
+	
 	//PrintBoard(theBoardArray);
 
 
@@ -321,17 +1330,31 @@ void CreateBoard(char theBoardArray[8][8][4]) {
 }
 
 void PrintBoard(char theBoardArray[8][8][4]){
+    char destinationString[200];
+   
+
     int i = 0;
     int j = 0;
-    
-    printk("\n");
+    int k = 0;
+    int m = 0;
+
+
     for(i = 0; i < 8; i++){
-        printk("\n");
         for(j = 0; j < 8; j++){
-            printk("%s ", theBoardArray[i][j]);
+            for(k = 0; k < 2; k++){
+                destinationString[m] = theBoardArray[i][j][k];
+                m++;
+            }
+            destinationString[m] = ' ';
+            m++;
         }
+        destinationString[m] = '\n';
+        m++;
     }
-    printk("\n");
+    destinationString[m] = '\0';
+
+
+    printk("%s", destinationString);
 
 
 }
@@ -561,8 +1584,8 @@ int WhitePawnAllMovesUser(int whitePawnAllMovesUser[100][2], char theBoardArray[
                 }
 
 
-            }else{
-                printk("User did not enter a valid piece to upgrade to\n");
+            }else if(pieceEndLocation[0][0] == 0 && strcmp(upgradedPiece, "") == 0){
+                printk("User did not enter a valid piece to upgrade to 1\n");
                 return -1;
             }
 
@@ -694,8 +1717,8 @@ int WhitePawnAllMovesUser(int whitePawnAllMovesUser[100][2], char theBoardArray[
                 }
 
 
-            }else{
-                printk("User did not enter a valid piece to upgrade to\n");
+            }else if(pieceEndLocation[0][0] == 0 && strcmp(upgradedPiece, "") == 0){
+                printk("User did not enter a valid piece to upgrade to 2\n");
                 return -1;
             }
 
@@ -739,6 +1762,9 @@ int WhitePawnAllMovesUser(int whitePawnAllMovesUser[100][2], char theBoardArray[
 
 
 int FindCheckAndCheckmateOnWhiteKing(char theBoardArray[8][8][4]){
+    printk("100");
+    //return -3;
+    
     int kingCurrLocation[1][2];
 
     int i = 0;
@@ -1051,6 +2077,10 @@ int FindCheckAndCheckmateOnWhiteKing(char theBoardArray[8][8][4]){
             }
         }
     }
+    
+
+    printk("101\n");
+    //return -3;
 
 
     stillLooping = true;
@@ -1061,6 +2091,8 @@ int FindCheckAndCheckmateOnWhiteKing(char theBoardArray[8][8][4]){
 
 
     while(stillLooping == true){
+        printk("110\n");
+        //return -3;
         if(k == 500){
             stillLooping = false;
         }
@@ -1072,6 +2104,8 @@ int FindCheckAndCheckmateOnWhiteKing(char theBoardArray[8][8][4]){
             //printk("HERE: %d %d %d %d %d\n", blackCpuAllPossibleMoves[k][0], blackCpuAllPossibleMoves[k][1], blackCpuAllPossibleMoves[k][2], blackCpuAllPossibleMoves[k][3], blackCpuAllPossibleMoves[k][4]);
             // If we found a check
             if((blackCpuAllPossibleMoves[k][3] == kingCurrLocation[0][0]) &&  (blackCpuAllPossibleMoves[k][4] == kingCurrLocation[0][1])){
+                printk("and we continue\n");
+                //return -3;
                 if(blackCpuAllPossibleMoves[k][0] == 0){
                     printk("Check from pawn at index %d %d\n", blackCpuAllPossibleMoves[k][1], blackCpuAllPossibleMoves[k][2]);
                     thereIsCheck = true;
@@ -1096,6 +2130,9 @@ int FindCheckAndCheckmateOnWhiteKing(char theBoardArray[8][8][4]){
                     printk("Check from king at index %d %d\n", blackCpuAllPossibleMoves[k][1], blackCpuAllPossibleMoves[k][2]);
                     thereIsCheck = true;
                 }
+            }else{
+                //printk("good god\n");
+                //return -3;
             }
 
 
@@ -1110,6 +2147,9 @@ int FindCheckAndCheckmateOnWhiteKing(char theBoardArray[8][8][4]){
     if(thereIsCheck == false){
         return 1;
     }
+    
+    printk("102\n");
+    //return -3;
 
 
     // Now we are going to look for checkmate
@@ -1762,21 +2802,21 @@ void ConvertLocationToIndex(char* theLocation, int pieceLocation[1][2]){
 
 
     
-    if(theLocation[0] == 'A'){
+    if(theLocation[0] == 'a'){
         pieceLocation[0][1] = 0;
-    }else if(theLocation[0] == 'B'){
+    }else if(theLocation[0] == 'b'){
         pieceLocation[0][1] = 1;
-    }else if(theLocation[0] == 'C'){
+    }else if(theLocation[0] == 'c'){
         pieceLocation[0][1] = 2;
-    }else if(theLocation[0] == 'D'){
+    }else if(theLocation[0] == 'd'){
         pieceLocation[0][1] = 3;
-    }else if(theLocation[0] == 'E'){
+    }else if(theLocation[0] == 'e'){
         pieceLocation[0][1] = 4;
-    }else if(theLocation[0] == 'F'){
+    }else if(theLocation[0] == 'f'){
         pieceLocation[0][1] = 5;
-    }else if(theLocation[0] == 'G'){
+    }else if(theLocation[0] == 'g'){
         pieceLocation[0][1] = 6;
-    }else if(theLocation[0] == 'H'){
+    }else if(theLocation[0] == 'h'){
         pieceLocation[0][1] = 7;
     }else{
         pieceLocation[0][1] = -1;
@@ -1867,6 +2907,7 @@ int WhiteCpuPickMove(char theBoardArray[8][8][4]){
 
     bool stillLooping = true;
 
+    //return -3;
 
     // Loops through the board
     for(i = 0; i < 8; i++){
@@ -2123,7 +3164,7 @@ int WhiteCpuPickMove(char theBoardArray[8][8][4]){
         }
     }
 
-
+    //return -3;
 
 
     //for(int i = 0; i < 500; i++){
@@ -2174,6 +3215,11 @@ int WhiteCpuPickMove(char theBoardArray[8][8][4]){
         unsigned int randomNumber;
         get_random_bytes(&randomNumber, sizeof(randomNumber));
         randomNumber %= currIndex;
+        
+        printk("randomNumber: %d", randomNumber); //4
+        printk("currIndex: %d", currIndex);     //20
+        
+        //return -3;
 
 
         if(coolCounter == 50){
@@ -2183,16 +3229,21 @@ int WhiteCpuPickMove(char theBoardArray[8][8][4]){
         }
 
 
-        // If the pieced to be moved is a pawn
+        // If the piece to be moved is a pawn
         if(whiteCpuAllPossibleMoves[randomNumber][0] == 0){
+            printk("at pawn\n");
+            //return -3;
             // If the pawn is ready for promotion, make it a queen
             if(whiteCpuAllPossibleMoves[randomNumber][3] == 0){
+                printk("at pawn 2.5\n");
+                return -3;
                 // Move the piece
                 strcpy(theBoardArray[whiteCpuAllPossibleMoves[randomNumber][1]][whiteCpuAllPossibleMoves[randomNumber][2]], "**");
                 strcpy(theBoardArray[whiteCpuAllPossibleMoves[randomNumber][3]][whiteCpuAllPossibleMoves[randomNumber][4]], "WQ");
 
 
                 checkedSelf = FindCheckAndCheckmateOnWhiteKing(theBoardArray);
+                
 
 
                 if(checkedSelf == 2 || checkedSelf == 3){
@@ -2205,21 +3256,35 @@ int WhiteCpuPickMove(char theBoardArray[8][8][4]){
                 }
                 
             }else{
+                printk("at pawn 2\n");
+                //return -3;
                 // Move the piece
                 strcpy(theBoardArray[whiteCpuAllPossibleMoves[randomNumber][1]][whiteCpuAllPossibleMoves[randomNumber][2]], "**");
-                strcpy(theBoardArray[whiteCpuAllPossibleMoves[randomNumber][3]][whiteCpuAllPossibleMoves[randomNumber][4]], "WP");    
+                strcpy(theBoardArray[whiteCpuAllPossibleMoves[randomNumber][3]][whiteCpuAllPossibleMoves[randomNumber][4]], "WP");
+                
+                printk("at pawn 3.8\n");
+                //return -3;  
+                
+                //int car = 0; //checkedSelf 
                 
                 checkedSelf = FindCheckAndCheckmateOnWhiteKing(theBoardArray);
+                
+                //return -100;
 
+		//printk("car %d", car);
+		//printk("at pawn 4\n");
+                //return -3;
+                
+                weLoveLooping = false;
 
-                if(checkedSelf == 2 || checkedSelf == 3){
+                //if(checkedSelf == 2 || checkedSelf == 3){
                     // Move the piece
-                    strcpy(theBoardArray[whiteCpuAllPossibleMoves[randomNumber][1]][whiteCpuAllPossibleMoves[randomNumber][2]], "WP");
-                    strcpy(theBoardArray[whiteCpuAllPossibleMoves[randomNumber][3]][whiteCpuAllPossibleMoves[randomNumber][4]], "**");  
-                    coolCounter++;  
-                }else{
-                    weLoveLooping = false;
-                }
+                    //strcpy(theBoardArray[whiteCpuAllPossibleMoves[randomNumber][1]][whiteCpuAllPossibleMoves[randomNumber][2]], "WP");
+                    //strcpy(theBoardArray[whiteCpuAllPossibleMoves[randomNumber][3]][whiteCpuAllPossibleMoves[randomNumber][4]], "**");  
+                    //coolCounter++;  
+                //}else{
+                    //weLoveLooping = false;
+                //}
             }
         }
         // If the piece to be moved is a knight
@@ -3107,6 +4172,8 @@ int WhiteKingAllMovesUser(int whiteKingAllMovesUser[100][2], char theBoardArray[
 int WhiteRookAllMovesUser(int whiteRookAllMovesUser[100][2], char theBoardArray[8][8][4], int pieceStartLocation[1][2], int pieceEndLocation[1][2], char* takenPiece){
     int returnValue = 0;
     int checkedSelf = 0;
+    
+    //printk("GREAT!\n");
 
 
     // Checks that the white rook is where the user says it is
@@ -4257,7 +5324,7 @@ int BlackPawnAllMovesUser(int blackPawnAllMovesUser[100][2], char theBoardArray[
                     returnValue = FindCheckAndCheckmateOnWhiteKing(theBoardArray);
                     return returnValue;  
                 }
-            }else{
+            }else if(pieceEndLocation[0][0] == 7 && strcmp(upgradedPiece, "") == 0){
                 printk("User did not enter a valid piece to upgrade to\n");
                 return -1;
             }
@@ -4380,7 +5447,7 @@ int BlackPawnAllMovesUser(int blackPawnAllMovesUser[100][2], char theBoardArray[
                     returnValue = FindCheckAndCheckmateOnWhiteKing(theBoardArray);
                     return returnValue;  
                 }
-            }else{
+            }else if(pieceEndLocation[0][0] == 7 && strcmp(upgradedPiece, "") == 0){
                 printk("User did not enter a valid piece to upgrade to\n");
                 return -1;
             }
@@ -7682,6 +8749,262 @@ int BlackQueenAllMovesCpu(int blackQueenAllMovesCpu[100][2], char theBoardArray[
 
     return 1;
 }
+
+void ClearBuffer(char buffer[]){
+    int i = 0;
+    for(i = 0; i < sizeof(buffer); i++){
+        buffer[i] = '\0';
+    }
+}
+
+void CopyToBuffer(char buffer[], char string[]){
+    printk("CopyToBuffer Function:\n");
+    int i = 0;
+    for(i = 0; i < sizeof(string); i++){
+        buffer[i] = string[i];
+    }
+}
+
+
+
+int WhiteKnightAllMovesUser(int whiteKnightAllMovesUser[100][2], char theBoardArray[8][8][4], int pieceStartLocation[1][2], int pieceEndLocation[1][2], char* takenPiece){
+    int returnValue = 0;
+    int checkedSelf = 0;
+    
+    // Checks that the white knight is where the user says it is
+    if(strcmp(theBoardArray[pieceStartLocation[0][0]][pieceStartLocation[0][1]], "WN") != 0){
+        printk("There is no white knight in that position\n");
+        return -1;
+    }
+
+
+    if(pieceStartLocation[0][0] == -1){
+        printk("User did not enter a real row for the starting piece location\n");
+        return -1;
+    }
+
+
+    if(pieceStartLocation[0][1] == -1){
+        printk("User did not enter a real column for the starting piece location\n");
+        return -1;
+    }
+
+
+    if(pieceEndLocation[0][0] == -1){
+        printk("User did not enter a real row for the ending piece location\n");
+        return -1;
+    }
+
+
+    if(pieceEndLocation[0][1] == -1){
+        printk("User did not enter a real column for the ending piece location\n");
+        return -1;
+    }
+
+    int i = 0;
+    int j = 0;
+
+    for(i = 0; i < 100; i++){
+        for(j = 0; j < 2; j++){
+            whiteKnightAllMovesUser[i][j] = -1;
+        }
+    }
+
+
+    int currIndex = 0;
+
+
+
+
+    // Checks if piece can up 1, right 2
+    // 1. Checks moving up 1, right 2 is still on board
+    // 2. Checks if up 1, right 2 doesn't have a white piece
+    if(pieceStartLocation[0][0] != 0 && pieceStartLocation[0][1] < 6){
+        if (theBoardArray[pieceStartLocation[0][0] - 1][pieceStartLocation[0][1] + 2][0] != 'W'){
+            whiteKnightAllMovesUser[currIndex][0] = pieceStartLocation[0][0] - 1;
+            whiteKnightAllMovesUser[currIndex][1] = pieceStartLocation[0][1] + 2;
+            currIndex++;
+        }  
+    }
+
+
+
+
+    // Checks if piece can up 2, right 1
+    // 1. Checks moving up 2, right 1 is still on board
+    // 2. Checks if up 2, right 1 doesn't have a white piece
+    if(pieceStartLocation[0][0] > 1 && pieceStartLocation[0][1] != 7){
+        if (theBoardArray[pieceStartLocation[0][0] - 2][pieceStartLocation[0][1] + 1][0] != 'W'){
+            whiteKnightAllMovesUser[currIndex][0] = pieceStartLocation[0][0] - 2;
+            whiteKnightAllMovesUser[currIndex][1] = pieceStartLocation[0][1] + 1;
+            currIndex++;
+        }  
+    }
+
+
+
+
+    // Checks if piece can down 1, right 2
+    // 1. Checks moving down 1, right 2 is still on board
+    // 2. Checks if down 1, right 2 doesn't have a white piece
+    if(pieceStartLocation[0][0] != 7 && pieceStartLocation[0][1] < 6){
+        if (theBoardArray[pieceStartLocation[0][0] + 1][pieceStartLocation[0][1] + 2][0] != 'W'){
+            whiteKnightAllMovesUser[currIndex][0] = pieceStartLocation[0][0] + 1;
+            whiteKnightAllMovesUser[currIndex][1] = pieceStartLocation[0][1] + 2;
+            currIndex++;
+        }  
+    }
+    
+
+
+    // Checks if piece can down 2, right 1
+    // 1. Checks moving down 2, right 1 is still on board
+    // 2. Checks if down 2, right 1 doesn't have a white piece
+    if(pieceStartLocation[0][0] < 6 && pieceStartLocation[0][1] != 7){
+        if (theBoardArray[pieceStartLocation[0][0] + 2][pieceStartLocation[0][1] + 1][0] != 'W'){
+            whiteKnightAllMovesUser[currIndex][0] = pieceStartLocation[0][0] + 2;
+            whiteKnightAllMovesUser[currIndex][1] = pieceStartLocation[0][1] + 1;
+            currIndex++;
+        }  
+    }
+    
+
+
+    // Checks if piece can up 1, left 2
+    // 1. Checks moving up 1, left 2 is still on board
+    // 2. Checks if up 1, left 2 doesn't have a white piece
+    if(pieceStartLocation[0][0] != 0 && pieceStartLocation[0][1] > 1){
+        if (theBoardArray[pieceStartLocation[0][0] - 1][pieceStartLocation[0][1] - 2][0] != 'W'){
+            whiteKnightAllMovesUser[currIndex][0] = pieceStartLocation[0][0] - 1;
+            whiteKnightAllMovesUser[currIndex][1] = pieceStartLocation[0][1] - 2;
+            currIndex++;
+        }  
+    }
+
+
+
+
+    // Checks if piece can up 2, left 1
+    // 1. Checks moving up 2, left 1 is still on board
+    // 2. Checks if up 2, left 1 doesn't have a white piece
+    if(pieceStartLocation[0][0] > 1 && pieceStartLocation[0][1] != 0){
+        if (theBoardArray[pieceStartLocation[0][0] - 2 ][pieceStartLocation[0][1] - 1][0] != 'W'){
+            whiteKnightAllMovesUser[currIndex][0] = pieceStartLocation[0][0] - 2;
+            whiteKnightAllMovesUser[currIndex][1] = pieceStartLocation[0][1] - 1;
+            currIndex++;
+        }  
+    }
+
+
+
+
+    // Checks if piece can down 1, left 2
+    // 1. Checks moving down 1, left 2 is still on board
+    // 2. Checks if down 1, left 2 doesn't have a white piece
+    if(pieceStartLocation[0][0] != 7 && pieceStartLocation[0][1] > 1){
+        if (theBoardArray[pieceStartLocation[0][0] + 1][pieceStartLocation[0][1] - 2][0] != 'W'){
+            whiteKnightAllMovesUser[currIndex][0] = pieceStartLocation[0][0] + 1;
+            whiteKnightAllMovesUser[currIndex][1] = pieceStartLocation[0][1] - 2;
+            currIndex++;
+        }  
+    }
+
+
+
+
+    // Checks if piece can down 2, left 1
+    // 1. Checks moving down 2, left 1 is still on board
+    // 2. Checks if down 2, left 1 doesn't have a white piece
+    if(pieceStartLocation[0][0] < 6 && pieceStartLocation[0][1] != 0){
+        if (theBoardArray[pieceStartLocation[0][0] + 2][pieceStartLocation[0][1] - 1][0] != 'W'){
+            whiteKnightAllMovesUser[currIndex][0] = pieceStartLocation[0][0] + 2;
+            whiteKnightAllMovesUser[currIndex][1] = pieceStartLocation[0][1] - 1;
+            currIndex++;
+        }  
+    }
+
+
+    
+    bool moveIsPossible = false;
+
+    i = 0;
+    j = 0;
+
+    // Sees if the location the player wants to move to is possible
+    for(i = 0; i < 100; i++){
+        for(j = 0; j < 1; j++){
+            if((whiteKnightAllMovesUser[i][j] == pieceEndLocation[0][0]) && (whiteKnightAllMovesUser[i][j+1] == pieceEndLocation[0][1])){
+                moveIsPossible = true;
+            }
+        }
+    }
+
+
+    // If we are not taking a piece
+    if(strcmp(takenPiece, "") == 0){
+        // If move is possible
+        if(moveIsPossible == true){
+            // Move the piece
+            strcpy(theBoardArray[pieceEndLocation[0][0]][pieceEndLocation[0][1]], "WN");
+            strcpy(theBoardArray[pieceStartLocation[0][0]][pieceStartLocation[0][1]], "**");
+            
+            checkedSelf = FindCheckAndCheckmateOnWhiteKing(theBoardArray);
+
+
+            if(checkedSelf == 2 || checkedSelf == 3){
+                strcpy(theBoardArray[pieceEndLocation[0][0]][pieceEndLocation[0][1]], "**");
+                strcpy(theBoardArray[pieceStartLocation[0][0]][pieceStartLocation[0][1]], "WN"); 
+                printk("Can't make that move, puts your king in check/checkmate\n");
+                return -1;
+            }else{
+                printk("Move made\n");
+                returnValue = FindCheckAndCheckmateOnBlackKing(theBoardArray);
+                return returnValue;  
+            }
+        }else{
+            printk("That is not a possible move\n");
+            return -1;
+        }
+    // If we are taking a piece
+    }else{
+         // If move is possible
+        if(moveIsPossible == true){
+            // Checks that the piece the user wants to take is actually there
+            if(strcmp(theBoardArray[pieceEndLocation[0][0]][pieceEndLocation[0][1]], takenPiece) == 0){
+                // Take the piece
+                strcpy(theBoardArray[pieceEndLocation[0][0]][pieceEndLocation[0][1]], "WN");
+                strcpy(theBoardArray[pieceStartLocation[0][0]][pieceStartLocation[0][1]], "**");
+                
+                checkedSelf = FindCheckAndCheckmateOnWhiteKing(theBoardArray);
+
+
+                if(checkedSelf == 2 || checkedSelf == 3){
+                    strcpy(theBoardArray[pieceEndLocation[0][0]][pieceEndLocation[0][1]], "**");
+                    strcpy(theBoardArray[pieceStartLocation[0][0]][pieceStartLocation[0][1]], "WN"); 
+                    printk("Can't make that move, puts your king in check/checkmate\n");
+                    return -1;
+                }else{
+                    printk("Move made\n");
+                    returnValue = FindCheckAndCheckmateOnBlackKing(theBoardArray);
+                    return returnValue;  
+                }
+            }else{
+                printk("The piece you want to take is not there\n");
+                return -1;
+            }
+        }else{
+            printk("That is not a possible move\n");
+            return -1;
+        }
+
+
+    }
+    
+}
+
+
+
+
 
 
 
