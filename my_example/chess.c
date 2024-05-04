@@ -234,7 +234,7 @@ static ssize_t driver_write(struct file *File, const char *user_buffer, size_t c
 	    buffer_pointer = strlen("NOGAME\n");
 	    
 	// User move    
-	}else if(buffer[1] == '2'){
+	}else if(buffer[1] == '2' && hasGameStarted == true){
 	    // If no game has been started
 	    if(hasGameStarted == false){
 	        strcpy(buffer, "NOGAME\n");
@@ -1129,11 +1129,47 @@ static ssize_t driver_write(struct file *File, const char *user_buffer, size_t c
 	        buffer_pointer = strlen("ILLMOVE\n");		        
 	        }
 	    
+	    }else{
+	        strcpy(buffer, "INVFMT\n");
+	    
+	        // Change buffer pointer to length of new string
+	        buffer_pointer = strlen("INVFMT\n");			    
 	    }
 	    
 	    
 	    
-	    
+	// Resign game    
+	}else if(strcmp(buffer, "04\n") == 0){
+	    hasGameStarted = false;
+	    whitesTurn = true;
+	   
+            strcpy(buffer, "OK\n");
+    
+            // Change buffer pointer to length of new string
+            buffer_pointer = strlen("OK\n");	
+        // CPU move
+	}else if(strcmp(buffer, "03\n") == 0){
+	
+	    int returnValue = -4;
+	    returnValue = WhiteCpuPickMove(theBoardArray);
+	   
+            strcpy(buffer, "NOTIMPLEMENTED\n");	
+	
+	    // Change buffer pointer to length of new string
+            buffer_pointer = strlen("NOTIMPLEMENTED\n");	
+        // Invalid format
+	}else if(buffer[1] == '2' && hasGameStarted == false){
+            strcpy(buffer, "NOGAME\n");	
+	
+	    // Change buffer pointer to length of new string
+            buffer_pointer = strlen("NOGAME\n");	
+	}
+	
+	else{
+            strcpy(buffer, "INVFMT\n");	
+	
+	    // Change buffer pointer to length of new string
+            buffer_pointer = strlen("INVFMT\n");		
 	}
 	
 	
@@ -3236,10 +3272,12 @@ int WhiteCpuPickMove(char theBoardArray[8][8][4]){
             // If the pawn is ready for promotion, make it a queen
             if(whiteCpuAllPossibleMoves[randomNumber][3] == 0){
                 printk("at pawn 2.5\n");
-                return -3;
+                //return -3;
                 // Move the piece
                 strcpy(theBoardArray[whiteCpuAllPossibleMoves[randomNumber][1]][whiteCpuAllPossibleMoves[randomNumber][2]], "**");
                 strcpy(theBoardArray[whiteCpuAllPossibleMoves[randomNumber][3]][whiteCpuAllPossibleMoves[randomNumber][4]], "WQ");
+                
+                return 1;
 
 
                 checkedSelf = FindCheckAndCheckmateOnWhiteKing(theBoardArray);
@@ -3267,6 +3305,8 @@ int WhiteCpuPickMove(char theBoardArray[8][8][4]){
                 
                 //int car = 0; //checkedSelf 
                 
+                return 1;
+                
                 checkedSelf = FindCheckAndCheckmateOnWhiteKing(theBoardArray);
                 
                 //return -100;
@@ -3292,6 +3332,8 @@ int WhiteCpuPickMove(char theBoardArray[8][8][4]){
             // Move the piece
             strcpy(theBoardArray[whiteCpuAllPossibleMoves[randomNumber][1]][whiteCpuAllPossibleMoves[randomNumber][2]], "**");
             strcpy(theBoardArray[whiteCpuAllPossibleMoves[randomNumber][3]][whiteCpuAllPossibleMoves[randomNumber][4]], "WN");
+            
+            return 1;
 
 
             checkedSelf = FindCheckAndCheckmateOnWhiteKing(theBoardArray);
@@ -3313,6 +3355,8 @@ int WhiteCpuPickMove(char theBoardArray[8][8][4]){
             // Move the piece
             strcpy(theBoardArray[whiteCpuAllPossibleMoves[randomNumber][1]][whiteCpuAllPossibleMoves[randomNumber][2]], "**");
             strcpy(theBoardArray[whiteCpuAllPossibleMoves[randomNumber][3]][whiteCpuAllPossibleMoves[randomNumber][4]], "WR"); 
+            
+            return 1;
 
 
             checkedSelf = FindCheckAndCheckmateOnWhiteKing(theBoardArray);
@@ -3333,6 +3377,8 @@ int WhiteCpuPickMove(char theBoardArray[8][8][4]){
             // Move the piece
             strcpy(theBoardArray[whiteCpuAllPossibleMoves[randomNumber][1]][whiteCpuAllPossibleMoves[randomNumber][2]], "**");
             strcpy(theBoardArray[whiteCpuAllPossibleMoves[randomNumber][3]][whiteCpuAllPossibleMoves[randomNumber][4]], "WB");
+            
+            return 1;
 
 
             checkedSelf = FindCheckAndCheckmateOnWhiteKing(theBoardArray);
@@ -3354,6 +3400,8 @@ int WhiteCpuPickMove(char theBoardArray[8][8][4]){
             // Move the piece
             strcpy(theBoardArray[whiteCpuAllPossibleMoves[randomNumber][1]][whiteCpuAllPossibleMoves[randomNumber][2]], "**");
             strcpy(theBoardArray[whiteCpuAllPossibleMoves[randomNumber][3]][whiteCpuAllPossibleMoves[randomNumber][4]], "WQ");
+            
+            return 1;
 
 
             checkedSelf = FindCheckAndCheckmateOnWhiteKing(theBoardArray);
@@ -3374,6 +3422,8 @@ int WhiteCpuPickMove(char theBoardArray[8][8][4]){
             // Move the piece
             strcpy(theBoardArray[whiteCpuAllPossibleMoves[randomNumber][1]][whiteCpuAllPossibleMoves[randomNumber][2]], "**");
             strcpy(theBoardArray[whiteCpuAllPossibleMoves[randomNumber][3]][whiteCpuAllPossibleMoves[randomNumber][4]], "WK");
+            
+            return 1;
 
 
             checkedSelf = FindCheckAndCheckmateOnWhiteKing(theBoardArray);
@@ -3411,6 +3461,7 @@ int WhiteCpuPickMove(char theBoardArray[8][8][4]){
 
 
 }
+
 
 
 
