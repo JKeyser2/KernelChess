@@ -198,7 +198,7 @@ static ssize_t driver_write(struct file *File, const char *user_buffer, size_t c
 	    
 	    
 	// If user wants current game state and game has started   
-	}else if(strcmp(buffer, "1\n") == 0 && hasGameStarted == true){
+	}else if(strcmp(buffer, "01\n") == 0 && hasGameStarted == true){
 	    // Clear the buffer
 	    ClearBuffer(buffer);
 	    
@@ -751,7 +751,7 @@ static ssize_t driver_write(struct file *File, const char *user_buffer, size_t c
 	        if(returnValue == 1){
 	        strcpy(buffer, "OK\n");
 	        
-	        whitesTurn = false;
+	        whitesTurn = true;
 	    
 	        // Change buffer pointer to length of new string
 	        buffer_pointer = strlen("OK\n");		        
@@ -761,7 +761,7 @@ static ssize_t driver_write(struct file *File, const char *user_buffer, size_t c
 	        // Change buffer pointer to length of new string
 	        buffer_pointer = strlen("CHECK\n");
 	        
-	        whitesTurn = false;	        
+	        whitesTurn = true;	        
 	        
 	        }else if(returnValue == 3){
 	        strcpy(buffer, "MATE\n");
@@ -823,7 +823,7 @@ static ssize_t driver_write(struct file *File, const char *user_buffer, size_t c
 	        if(returnValue == 1){
 	        strcpy(buffer, "OK\n");
 	        
-	        whitesTurn = false;
+	        whitesTurn = true;
 	    
 	        // Change buffer pointer to length of new string
 	        buffer_pointer = strlen("OK\n");		        
@@ -833,7 +833,7 @@ static ssize_t driver_write(struct file *File, const char *user_buffer, size_t c
 	        // Change buffer pointer to length of new string
 	        buffer_pointer = strlen("CHECK\n");
 	        
-	        whitesTurn = false;	        
+	        whitesTurn = true;	        
 	        
 	        }else if(returnValue == 3){
 	        strcpy(buffer, "MATE\n");
@@ -895,7 +895,7 @@ static ssize_t driver_write(struct file *File, const char *user_buffer, size_t c
 	        if(returnValue == 1){
 	        strcpy(buffer, "OK\n");
 	        
-	        whitesTurn = false;
+	        whitesTurn = true;
 	    
 	        // Change buffer pointer to length of new string
 	        buffer_pointer = strlen("OK\n");		        
@@ -905,7 +905,7 @@ static ssize_t driver_write(struct file *File, const char *user_buffer, size_t c
 	        // Change buffer pointer to length of new string
 	        buffer_pointer = strlen("CHECK\n");
 	        
-	        whitesTurn = false;	        
+	        whitesTurn = true;	        
 	        
 	        }else if(returnValue == 3){
 	        strcpy(buffer, "MATE\n");
@@ -965,7 +965,7 @@ static ssize_t driver_write(struct file *File, const char *user_buffer, size_t c
 	        if(returnValue == 1){
 	        strcpy(buffer, "OK\n");
 	        
-	        whitesTurn = false;
+	        whitesTurn = true;
 	    
 	        // Change buffer pointer to length of new string
 	        buffer_pointer = strlen("OK\n");		        
@@ -975,7 +975,7 @@ static ssize_t driver_write(struct file *File, const char *user_buffer, size_t c
 	        // Change buffer pointer to length of new string
 	        buffer_pointer = strlen("CHECK\n");
 	        
-	        whitesTurn = false;	        
+	        whitesTurn = true;	        
 	        
 	        }else if(returnValue == 3){
 	        strcpy(buffer, "MATE\n");
@@ -1034,7 +1034,7 @@ static ssize_t driver_write(struct file *File, const char *user_buffer, size_t c
 	        if(returnValue == 1){
 	        strcpy(buffer, "OK\n");
 	        
-	        whitesTurn = false;
+	        whitesTurn = true;
 	    
 	        // Change buffer pointer to length of new string
 	        buffer_pointer = strlen("OK\n");		        
@@ -1044,7 +1044,7 @@ static ssize_t driver_write(struct file *File, const char *user_buffer, size_t c
 	        // Change buffer pointer to length of new string
 	        buffer_pointer = strlen("CHECK\n");
 	        
-	        whitesTurn = false;	        
+	        whitesTurn = true;	        
 	        
 	        }else if(returnValue == 3){
 	        strcpy(buffer, "MATE\n");
@@ -1103,7 +1103,7 @@ static ssize_t driver_write(struct file *File, const char *user_buffer, size_t c
 	        if(returnValue == 1){
 	        strcpy(buffer, "OK\n");
 	        
-	        whitesTurn = false;
+	        whitesTurn = true;
 	    
 	        // Change buffer pointer to length of new string
 	        buffer_pointer = strlen("OK\n");		        
@@ -1113,7 +1113,7 @@ static ssize_t driver_write(struct file *File, const char *user_buffer, size_t c
 	        // Change buffer pointer to length of new string
 	        buffer_pointer = strlen("CHECK\n");
 	        
-	        whitesTurn = false;	        
+	        whitesTurn = true;	        
 	        
 	        }else if(returnValue == 3){
 	        strcpy(buffer, "MATE\n");
@@ -5495,7 +5495,7 @@ int BlackKingAllMovesUser(int blackKingAllMovesUser[100][2], char theBoardArray[
 
 
     // Checks that the black king is where the user says it is
-    if(strcmp(theBoardArray[pieceStartLocation[0][0]][pieceStartLocation[0][1]], "WK") != 0){
+    if(strcmp(theBoardArray[pieceStartLocation[0][0]][pieceStartLocation[0][1]], "BK") != 0){
         printk("There is no black king in that position\n");
         return -1;
     }
