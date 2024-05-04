@@ -1,0 +1,99 @@
+*** SPECIAL NOTE ***
+It is sudo echo "00 W" > /dev/chessdriver
+
+NOT sudo echo "00 W" > /dev/chess
+
+
+
+
+1. Chessboard Representation:
+
+My chessboard is represented as a 2D array. It is easy to both implement and manage.
+
+
+
+2. Piece Encoding:
+
+Black Pawn: BP
+Black King: BK
+Black Queen: BQ
+Black Rook: BR
+Black Bishop: BB
+Black Knight: BN
+
+White Pawn: WP
+White King: WK
+White Queen: WQ
+White Rook: WR
+White Bishop: WB
+White Knight: WN
+
+
+
+
+3. Game State Management:
+
+Boolean to keep track of turn
+
+For check status, after a move is made, I would look for both check and checkmate on the king of the opposing player. For example, let us say that white just moved. Following, I gather up every possible move that white can make. If any move takes the black king where the black king is currently standing, it is check. If every move the black king can make is taken on top of where they are currently standing being taken, it is checkmate.
+
+I do not include a history of moves as it is not necessary.
+
+
+
+
+4. General Approach:
+
+To validate moves, I gather up all possible moves a piece can make. If the user's move is within these possible moves, I allow it. To handle the different moves sets of each piece, I gave each piece its own function. As they were extra credit, I did not include castling and en passant.
+
+
+
+5. Collision Detection:
+
+If there is another piece in the path of the piece to be moved, the piece to be moved can never go past it unless it is a knight. If the piece in the path is of the opposing color, can land on it. If the piece in the path is of the same color, can not land on it. If the capture is legal, the moving piece is copied into the array where the captured piece is, removing the captured piece from the board.
+
+
+
+
+6. Special Cases:
+
+If the piece is a pawn and it makes its way to the other side of the board, it will be promoted. The user can choose what their piece will upgrade to while the CPU always upgrades to a queen. After a move was made, I would look for both check and checkmate on the king of the opposing player. For example, let us say that white just moved. Following, I gather up every possible move that white can make. If any move takes the black king where the black king is currently standing, it is check. If every move the black king can make is taken on top of where they are currently standing being taken, it is checkmate.
+
+
+
+
+7. Check and Checkmate Detection: 
+
+After a move was made, I would look for both check and checkmate on the king of the opposing player. For example, let us say that white just moved. Following, I gather up every possible move that white can make. If any move takes the black king where the black king is currently standing, it is check. If every move the black king can make is taken on top of where they are currently standing being taken, it is checkmate.
+
+
+
+8. Strategy Implementation:
+
+For CPU move, I gather up all possible moves and choose one from random.
+
+
+
+9. Difficulty Levels:
+
+Not applicable
+
+
+
+10. Extra Credit Implementations:
+
+Not applicable
+
+
+
+11. Decision Justifications:
+
+I just always went with what was intuitive to get the game working
+
+
+
+12. Complexity Considerations:
+
+Never really made these considerations as it would be tough to make this code complex enough to effect the speed of runtime.
+
+
