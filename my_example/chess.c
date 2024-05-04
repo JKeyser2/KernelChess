@@ -258,7 +258,6 @@ static ssize_t driver_write(struct file *File, const char *user_buffer, size_t c
 	        
 	    // Moving white pawn   	    
 	    }else if(buffer[3] == 'W' && buffer[4] == 'P'){
-	        printk("WE IN HERE\n");
 	        
 	        int whitePawnAllMovesUser[100][2];
 	        
@@ -326,6 +325,7 @@ static ssize_t driver_write(struct file *File, const char *user_buffer, size_t c
 	        strcpy(buffer, "MATE\n");
 	        
 	        hasGameStarted = false;
+	        whitesTurn = true;
 	    
 	        // Change buffer pointer to length of new string
 	        buffer_pointer = strlen("MATE\n");		        
@@ -398,6 +398,7 @@ static ssize_t driver_write(struct file *File, const char *user_buffer, size_t c
 	        strcpy(buffer, "MATE\n");
 	        
 	        hasGameStarted = false;
+	        whitesTurn = true;
 	    
 	        // Change buffer pointer to length of new string
 	        buffer_pointer = strlen("MATE\n");		        
@@ -470,6 +471,7 @@ static ssize_t driver_write(struct file *File, const char *user_buffer, size_t c
 	        strcpy(buffer, "MATE\n");
 	        
 	        hasGameStarted = false;
+	        whitesTurn = true;
 	    
 	        // Change buffer pointer to length of new string
 	        buffer_pointer = strlen("MATE\n");		        
@@ -542,6 +544,7 @@ static ssize_t driver_write(struct file *File, const char *user_buffer, size_t c
 	        strcpy(buffer, "MATE\n");
 	        
 	        hasGameStarted = false;
+	        whitesTurn = true;
 	    
 	        // Change buffer pointer to length of new string
 	        buffer_pointer = strlen("MATE\n");		        
@@ -614,6 +617,7 @@ static ssize_t driver_write(struct file *File, const char *user_buffer, size_t c
 	        strcpy(buffer, "MATE\n");
 	        
 	        hasGameStarted = false;
+	        whitesTurn = true;
 	    
 	        // Change buffer pointer to length of new string
 	        buffer_pointer = strlen("MATE\n");		        
@@ -686,6 +690,7 @@ static ssize_t driver_write(struct file *File, const char *user_buffer, size_t c
 	        strcpy(buffer, "MATE\n");
 	        
 	        hasGameStarted = false;
+	        whitesTurn = true;
 	    
 	        // Change buffer pointer to length of new string
 	        buffer_pointer = strlen("MATE\n");		        
@@ -767,6 +772,7 @@ static ssize_t driver_write(struct file *File, const char *user_buffer, size_t c
 	        strcpy(buffer, "MATE\n");
 	        
 	        hasGameStarted = false;
+	        whitesTurn = true;
 	    
 	        // Change buffer pointer to length of new string
 	        buffer_pointer = strlen("MATE\n");		        
@@ -839,6 +845,7 @@ static ssize_t driver_write(struct file *File, const char *user_buffer, size_t c
 	        strcpy(buffer, "MATE\n");
 	        
 	        hasGameStarted = false;
+	        whitesTurn = true;
 	    
 	        // Change buffer pointer to length of new string
 	        buffer_pointer = strlen("MATE\n");		        
@@ -911,6 +918,7 @@ static ssize_t driver_write(struct file *File, const char *user_buffer, size_t c
 	        strcpy(buffer, "MATE\n");
 	        
 	        hasGameStarted = false;
+	        whitesTurn = true;
 	    
 	        // Change buffer pointer to length of new string
 	        buffer_pointer = strlen("MATE\n");		        
@@ -981,6 +989,7 @@ static ssize_t driver_write(struct file *File, const char *user_buffer, size_t c
 	        strcpy(buffer, "MATE\n");
 	        
 	        hasGameStarted = false;
+	        whitesTurn = true;
 	    
 	        // Change buffer pointer to length of new string
 	        buffer_pointer = strlen("MATE\n");		        
@@ -1050,6 +1059,7 @@ static ssize_t driver_write(struct file *File, const char *user_buffer, size_t c
 	        strcpy(buffer, "MATE\n");
 	        
 	        hasGameStarted = false;
+	        whitesTurn = true;
 	    
 	        // Change buffer pointer to length of new string
 	        buffer_pointer = strlen("MATE\n");		        
@@ -1119,6 +1129,7 @@ static ssize_t driver_write(struct file *File, const char *user_buffer, size_t c
 	        strcpy(buffer, "MATE\n");
 	        
 	        hasGameStarted = false;
+	        whitesTurn = true;
 	    
 	        // Change buffer pointer to length of new string
 	        buffer_pointer = strlen("MATE\n");		        
@@ -1178,6 +1189,8 @@ static ssize_t driver_write(struct file *File, const char *user_buffer, size_t c
 	    
 	    
             returnValue = FindCheckAndCheckmateOnWhiteKing(theBoardArray);
+            
+            whitesTurn = true;
 	    
 	    if(returnValue == 1){
             strcpy(buffer, "OK\n");	
@@ -1191,7 +1204,10 @@ static ssize_t driver_write(struct file *File, const char *user_buffer, size_t c
             buffer_pointer = strlen("CHECK\n");		    
 	    
 	    }else{
-            strcpy(buffer, "MATE\n");	
+            strcpy(buffer, "MATE\n");
+            	
+	    hasGameStarted = false;
+	    whitesTurn = true;
 	
 	    // Change buffer pointer to length of new string
             buffer_pointer = strlen("MATE\n");		    
@@ -1231,6 +1247,8 @@ static ssize_t driver_write(struct file *File, const char *user_buffer, size_t c
 	    
 	    
             returnValue = FindCheckAndCheckmateOnBlackKing(theBoardArray);
+            
+            whitesTurn = false;
 	    
 	    if(returnValue == 1){
             strcpy(buffer, "OK\n");	
@@ -1244,7 +1262,10 @@ static ssize_t driver_write(struct file *File, const char *user_buffer, size_t c
             buffer_pointer = strlen("CHECK\n");		    
 	    
 	    }else{
-            strcpy(buffer, "MATE\n");	
+            strcpy(buffer, "MATE\n");
+            
+            hasGameStarted = false;
+	    whitesTurn = true;
 	
 	    // Change buffer pointer to length of new string
             buffer_pointer = strlen("MATE\n");		    
