@@ -1135,8 +1135,27 @@ static ssize_t driver_write(struct file *File, const char *user_buffer, size_t c
 	        // Change buffer pointer to length of new string
 	        buffer_pointer = strlen("INVFMT\n");			    
 	    }
-	    
-	    
+	// White trying to resign, not their turn   
+	}else if(strcmp(buffer, "04\n") == 0 && hasGameStarted == true && userIsWhite == true && whitesTurn == false){
+            strcpy(buffer, "OOT\n");	
+	
+	    // Change buffer pointer to length of new string
+            buffer_pointer = strlen("OOT\n");		
+
+        // Black trying to resign, not their turn
+        }else if(strcmp(buffer, "04\n") == 0 && hasGameStarted == true && userIsWhite == false && whitesTurn == true){
+            strcpy(buffer, "OOT\n");	
+	
+	    // Change buffer pointer to length of new string
+            buffer_pointer = strlen("OOT\n");	       
+        
+        // Trying to resign no game
+        }else if(strcmp(buffer, "04\n") == 0 && hasGameStarted == false){
+            strcpy(buffer, "NOGAME\n");	
+	
+	    // Change buffer pointer to length of new string
+            buffer_pointer = strlen("NOGAME\n");	         
+            
 	    
 	// Resign game    
 	}else if(strcmp(buffer, "04\n") == 0){
@@ -1147,17 +1166,106 @@ static ssize_t driver_write(struct file *File, const char *user_buffer, size_t c
     
             // Change buffer pointer to length of new string
             buffer_pointer = strlen("OK\n");	
-        // CPU move
-	}else if(strcmp(buffer, "03\n") == 0){
+        // CPU move (black)
+        // Game has started
+        // User is white
+        // Not white's turn
+	}else if(strcmp(buffer, "03\n") == 0 && hasGameStarted == true && userIsWhite == true && whitesTurn == false){
 	
-	    int returnValue = -4;
-	    returnValue = WhiteCpuPickMove(theBoardArray);
-	   
-            strcpy(buffer, "NOTIMPLEMENTED\n");	
+	    int returnValue = 0;
+	
+	    BlackCpuPickMove(theBoardArray);
+	    
+	    
+            returnValue = FindCheckAndCheckmateOnWhiteKing(theBoardArray);
+	    
+	    if(returnValue == 1){
+            strcpy(buffer, "OK\n");	
 	
 	    // Change buffer pointer to length of new string
-            buffer_pointer = strlen("NOTIMPLEMENTED\n");	
-        // Invalid format
+            buffer_pointer = strlen("OK\n");	        
+	    }else if(returnValue == 2){
+            strcpy(buffer, "CHECK\n");	
+	
+	    // Change buffer pointer to length of new string
+            buffer_pointer = strlen("CHECK\n");		    
+	    
+	    }else{
+            strcpy(buffer, "MATE\n");	
+	
+	    // Change buffer pointer to length of new string
+            buffer_pointer = strlen("MATE\n");		    
+	    
+	    }
+
+	
+        // CPU move (black)
+        // User is white
+        // White's turn
+	}else if(strcmp(buffer, "03\n") == 0 && userIsWhite == true && whitesTurn == true){
+            strcpy(buffer, "OOT\n");	
+	
+	    // Change buffer pointer to length of new string
+            buffer_pointer = strlen("OOT\n");		
+	
+	
+	
+	
+	}else if(strcmp(buffer, "03\n") == 0 && hasGameStarted == false){
+            strcpy(buffer, "NOGAME\n");	
+	
+	    // Change buffer pointer to length of new string
+            buffer_pointer = strlen("NOGAME\n");			
+	
+	
+	
+	// CPU move (white)
+        // Game has started
+        // User is black
+        // Not black's turn
+	}else if(strcmp(buffer, "03\n") == 0 && hasGameStarted == true && userIsWhite == false && whitesTurn == true){
+	
+	    int returnValue = 0;
+	
+	    WhiteCpuPickMove(theBoardArray);
+	    
+	    
+            returnValue = FindCheckAndCheckmateOnBlackKing(theBoardArray);
+	    
+	    if(returnValue == 1){
+            strcpy(buffer, "OK\n");	
+	
+	    // Change buffer pointer to length of new string
+            buffer_pointer = strlen("OK\n");	        
+	    }else if(returnValue == 2){
+            strcpy(buffer, "CHECK\n");	
+	
+	    // Change buffer pointer to length of new string
+            buffer_pointer = strlen("CHECK\n");		    
+	    
+	    }else{
+            strcpy(buffer, "MATE\n");	
+	
+	    // Change buffer pointer to length of new string
+            buffer_pointer = strlen("MATE\n");		    
+	    
+	    }
+
+	
+	
+	
+	
+	// CPU move (white)
+        // User is black
+        // Black's turn
+	}else if(strcmp(buffer, "03\n") == 0 && userIsWhite == false && whitesTurn == false){
+            strcpy(buffer, "OOT\n");	
+	
+	    // Change buffer pointer to length of new string
+            buffer_pointer = strlen("OOT\n");		
+	
+
+	// Invalid format
 	}else if(buffer[1] == '2' && hasGameStarted == false){
             strcpy(buffer, "NOGAME\n");	
 	
@@ -3831,6 +3939,7 @@ int BlackCpuPickMove(char theBoardArray[8][8][4]){
                 strcpy(theBoardArray[blackCpuAllPossibleMoves[randomNumber][1]][blackCpuAllPossibleMoves[randomNumber][2]], "**");
                 strcpy(theBoardArray[blackCpuAllPossibleMoves[randomNumber][3]][blackCpuAllPossibleMoves[randomNumber][4]], "BQ"); 
 
+		return 1;
 
                 checkedSelf = FindCheckAndCheckmateOnBlackKing(theBoardArray);
 
@@ -3850,6 +3959,8 @@ int BlackCpuPickMove(char theBoardArray[8][8][4]){
                 // Move the piece
                 strcpy(theBoardArray[blackCpuAllPossibleMoves[randomNumber][1]][blackCpuAllPossibleMoves[randomNumber][2]], "**");
                 strcpy(theBoardArray[blackCpuAllPossibleMoves[randomNumber][3]][blackCpuAllPossibleMoves[randomNumber][4]], "BP");   
+                
+                return 1;
 
 
                 checkedSelf = FindCheckAndCheckmateOnBlackKing(theBoardArray);
@@ -3873,6 +3984,8 @@ int BlackCpuPickMove(char theBoardArray[8][8][4]){
             // Move the piece
             strcpy(theBoardArray[blackCpuAllPossibleMoves[randomNumber][1]][blackCpuAllPossibleMoves[randomNumber][2]], "**");
             strcpy(theBoardArray[blackCpuAllPossibleMoves[randomNumber][3]][blackCpuAllPossibleMoves[randomNumber][4]], "BN");
+            
+            return 1;
 
 
             checkedSelf = FindCheckAndCheckmateOnBlackKing(theBoardArray);
@@ -3896,6 +4009,8 @@ int BlackCpuPickMove(char theBoardArray[8][8][4]){
             // Move the piece
             strcpy(theBoardArray[blackCpuAllPossibleMoves[randomNumber][1]][blackCpuAllPossibleMoves[randomNumber][2]], "**");
             strcpy(theBoardArray[blackCpuAllPossibleMoves[randomNumber][3]][blackCpuAllPossibleMoves[randomNumber][4]], "BR"); 
+            
+            return 1;
 
 
             checkedSelf = FindCheckAndCheckmateOnBlackKing(theBoardArray);
@@ -3918,6 +4033,8 @@ int BlackCpuPickMove(char theBoardArray[8][8][4]){
             // Move the piece
             strcpy(theBoardArray[blackCpuAllPossibleMoves[randomNumber][1]][blackCpuAllPossibleMoves[randomNumber][2]], "**");
             strcpy(theBoardArray[blackCpuAllPossibleMoves[randomNumber][3]][blackCpuAllPossibleMoves[randomNumber][4]], "BB");
+            
+            return 1;
 
 
             checkedSelf = FindCheckAndCheckmateOnBlackKing(theBoardArray);
@@ -3941,6 +4058,8 @@ int BlackCpuPickMove(char theBoardArray[8][8][4]){
             // Move the piece
             strcpy(theBoardArray[blackCpuAllPossibleMoves[randomNumber][1]][blackCpuAllPossibleMoves[randomNumber][2]], "**");
             strcpy(theBoardArray[blackCpuAllPossibleMoves[randomNumber][3]][blackCpuAllPossibleMoves[randomNumber][4]], "BQ");
+            
+            return 1;
 
 
             checkedSelf = FindCheckAndCheckmateOnBlackKing(theBoardArray);
@@ -3963,6 +4082,8 @@ int BlackCpuPickMove(char theBoardArray[8][8][4]){
             // Move the piece
             strcpy(theBoardArray[blackCpuAllPossibleMoves[randomNumber][1]][blackCpuAllPossibleMoves[randomNumber][2]], "**");
             strcpy(theBoardArray[blackCpuAllPossibleMoves[randomNumber][3]][blackCpuAllPossibleMoves[randomNumber][4]], "BK");
+            
+            return 1;
 
 
             checkedSelf = FindCheckAndCheckmateOnBlackKing(theBoardArray);
