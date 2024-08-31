@@ -1927,7 +1927,7 @@ int WhitePawnAllMovesUser(int whitePawnAllMovesUser[100][2], char theBoardArray[
 
 
 int FindCheckAndCheckmateOnWhiteKing(char theBoardArray[8][8][4]){
-    printk("100");
+    //printk("100");
     //return -3;
     
     int kingCurrLocation[1][2];
@@ -2244,7 +2244,7 @@ int FindCheckAndCheckmateOnWhiteKing(char theBoardArray[8][8][4]){
     }
     
 
-    printk("101\n");
+    //printk("101\n");
     //return -3;
 
 
@@ -2256,7 +2256,7 @@ int FindCheckAndCheckmateOnWhiteKing(char theBoardArray[8][8][4]){
 
 
     while(stillLooping == true){
-        printk("110\n");
+        //printk("110\n");
         //return -3;
         if(k == 500){
             stillLooping = false;
@@ -2313,7 +2313,7 @@ int FindCheckAndCheckmateOnWhiteKing(char theBoardArray[8][8][4]){
         return 1;
     }
     
-    printk("102\n");
+    //printk("102\n");
     //return -3;
 
 
@@ -3381,26 +3381,26 @@ int WhiteCpuPickMove(char theBoardArray[8][8][4]){
         get_random_bytes(&randomNumber, sizeof(randomNumber));
         randomNumber %= currIndex;
         
-        printk("randomNumber: %d", randomNumber); //4
-        printk("currIndex: %d", currIndex);     //20
+        //printk("randomNumber: %d", randomNumber); //4
+        //printk("currIndex: %d", currIndex);     //20
         
         //return -3;
 
 
         if(coolCounter == 50){
             weLoveLooping = false;
-            printk("cool\n");
+            //printk("cool\n");
             return 3;
         }
 
 
         // If the piece to be moved is a pawn
         if(whiteCpuAllPossibleMoves[randomNumber][0] == 0){
-            printk("at pawn\n");
+            //printk("at pawn\n");
             //return -3;
             // If the pawn is ready for promotion, make it a queen
             if(whiteCpuAllPossibleMoves[randomNumber][3] == 0){
-                printk("at pawn 2.5\n");
+                //printk("at pawn 2.5\n");
                 //return -3;
                 // Move the piece
                 strcpy(theBoardArray[whiteCpuAllPossibleMoves[randomNumber][1]][whiteCpuAllPossibleMoves[randomNumber][2]], "**");
@@ -3423,13 +3423,13 @@ int WhiteCpuPickMove(char theBoardArray[8][8][4]){
                 }
                 
             }else{
-                printk("at pawn 2\n");
+                //printk("at pawn 2\n");
                 //return -3;
                 // Move the piece
                 strcpy(theBoardArray[whiteCpuAllPossibleMoves[randomNumber][1]][whiteCpuAllPossibleMoves[randomNumber][2]], "**");
                 strcpy(theBoardArray[whiteCpuAllPossibleMoves[randomNumber][3]][whiteCpuAllPossibleMoves[randomNumber][4]], "WP");
                 
-                printk("at pawn 3.8\n");
+                //printk("at pawn 3.8\n");
                 //return -3;  
                 
                 //int car = 0; //checkedSelf 
@@ -3949,7 +3949,7 @@ int BlackCpuPickMove(char theBoardArray[8][8][4]){
 
         if(coolCounter == 50){
             weLoveLooping = false;
-            printk("cool\n");
+            //printk("cool\n");
             return 3;
         }
         // If the pieced to be moved is a pawn
